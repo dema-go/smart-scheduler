@@ -20,5 +20,8 @@ def get_db():
 
 
 def init_db():
-    from app import models
+    # 导入所有模型类，确保 relationship 字符串引用能正确解析
+    from app.models.employee import Employee
+    from app.models.shift import ShiftType
+    from app.models.schedule import Schedule
     Base.metadata.create_all(bind=engine)
