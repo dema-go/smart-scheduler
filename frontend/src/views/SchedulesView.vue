@@ -40,7 +40,7 @@
         </el-table-column>
         <el-table-column label="班次" width="120">
           <template #default="{ row }">
-            <el-tag :color="row.shift_color">
+            <el-tag :style="{ backgroundColor: row.shift_color, color: getTextColor(row.shift_color) }">
               {{ row.shift_name }}
             </el-tag>
           </template>
@@ -60,6 +60,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleApi } from '../api'
+
+// 根据背景色计算文字颜色（深色背景用白色文字，浅色背景用黑色文字）
+const getTextColor = (color) => {
+  if (!color) return '#000000'
+  // 去掉 # 前缀
+  const hex = color.replace('#', '')
+  // 解析 RGB
+  const r = parseInt(hex.substr(0, 2), 16)
+  const g = parseInt(hex.substr(2, 2), 16)
+  const b = parseInt(hex.substr(4, 2), 16)
+  // 计算亮度 (使用标准公式)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  return brightness > 128 ? '#000000' : '#ffffff'
+}
 
 const schedules = ref([])
 const allSchedules = ref([])

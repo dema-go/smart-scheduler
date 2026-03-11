@@ -94,25 +94,45 @@ class SchedulerService:
         return available
 
     def calculate_score(self, employee: Employee, shift_type: ShiftType, shift_date: date,
-                       existing_hours: Dict[int, float]) -> float:
+                       existing_hours: Dict[int, float], avg_hours: float = 0,
+                       total_employee_count: int = 0, target_hours: float = 0) -> float:
         """计算员工分配到班次的评分"""
         score = 0.0
         shift_duration = self.calculate_shift_duration(shift_type)
-
-        # 1. 偏好匹配 (权重: 30)
-        if shift_type.id in (employee.preferred_shifts or []):
-            score += 30
-
-        # 2. 公平性 - 工作时长少的员工优先 (权重: 50)
         current_hours = existing_hours.get(employee.id, 0.0)
-        # 时长越少分数越高，上限50分
-        score += max(0, 50 - current_hours * 2)
 
-        # 3. 工作时长均衡 - 如果分配这个班次，会导致时长差异过大，扣分 (权重: 20)
-        potential_hours = current_hours + shift_duration
-        max_hours = max(existing_hours.values()) if existing_hours else 0
-        if potential_hours > max_hours + 8:  # 如果分配后超过当前最高时长8小时，扣分
-            score -= 20
+        # 1. 偏好匹配 (权重: 25)
+        if shift_type.id in (employee.preferred_shifts or []):
+            score += 25
+
+        # 2. 公平性 - 工作时长少的员工优先 (权重: 120)
+        # 优化：使用动态目标时长计算，优先分配给未达到目标时长的员工
+        if target_hours > 0:
+            # 距离目标时长越远，分数越高
+            hour_diff = target_hours - current_hours
+            score += min(120, max(0, hour_diff * 8))  # 每少1小时加8分，上限120分
+        elif avg_hours > 0:
+            hour_diff = avg_hours - current_hours
+            score += min(120, max(0, hour_diff * 5))
+        else:
+            score += 50
+
+        # 3. 工作时长均衡 - 严格控制时长差异 (权重: 50)
+        # 优化：降低差异容忍度，更严格控制最大时长
+        if existing_hours:
+            max_hours = max(existing_hours.values())
+            min_hours = min(existing_hours.values())
+            potential_hours = current_hours + shift_duration
+
+            # 如果分配后超过当前最高时长4小时，扣分
+            if potential_hours > max_hours + 4:
+                score -= 50
+            # 如果分配后超过平均时长太多，也扣分
+            elif target_hours > 0 and potential_hours > target_hours + 8:
+                score -= 30
+            # 如果当前是最低时长，优先分配
+            elif current_hours == min_hours and potential_hours <= max_hours:
+                score += 20
 
         # 4. 避免连续同班次 (权重: 10)
         last_shift_id = self.get_employee_last_shift(employee.id, shift_date)
@@ -144,6 +164,14 @@ class SchedulerService:
             st.id: self.calculate_shift_duration(st) for st in shift_types
         }
 
+        # 预估总工作时长，用于计算目标工作时长作为评分参考
+        days_count = (end_date - start_date).days + 1
+        total_shifts_per_day = sum(st.required_count for st in shift_types)
+        estimated_total_hours = sum(shift_durations[st.id] * st.required_count for st in shift_types) * days_count
+        # 目标时长：总时长除以员工数，得到每个员工应该工作的时长
+        target_hours = estimated_total_hours / len(employees) if employees else 0
+        avg_hours = target_hours  # 保持向后兼容
+
         # 遍历日期范围
         current_date = start_date
         while current_date <= end_date:
@@ -160,7 +188,8 @@ class SchedulerService:
                     scored_employees = []
                     for emp in available_employees:
                         score = self.calculate_score(
-                            emp, shift_type, current_date, existing_hours
+                            emp, shift_type, current_date, existing_hours, avg_hours,
+                            len(employees), target_hours
                         )
                         scored_employees.append((emp, score))
 
