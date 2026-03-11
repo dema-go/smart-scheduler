@@ -39,8 +39,10 @@ class SchedulerService:
 
         available = []
         for emp in all_employees:
+            # 如果没有设置可用天数，默认所有天都可用
+            emp_available_days = emp.available_days if emp.available_days else [0, 1, 2, 3, 4, 5, 6]
             # 检查员工是否在指定日期可用
-            if weekday not in (emp.available_days or []):
+            if weekday not in emp_available_days:
                 continue
             # 检查员工是否已有该日期的排班
             existing = self.db.query(Schedule).filter(
