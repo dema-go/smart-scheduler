@@ -22,8 +22,12 @@
         <el-form-item label="结束日期">
           <el-date-picker v-model="queryParams.end_date" type="date" placeholder="选择结束日期" value-format="YYYY-MM-DD" />
         </el-form-item>
+        <el-form-item label="员工">
+          <el-input v-model="queryParams.employee_name" placeholder="搜索员工" clearable style="width: 120px" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="loadData">查询</el-button>
+          <el-button @click="queryParams = { start_date: null, end_date: null, employee_name: '' }">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -53,14 +57,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleApi } from '../api'
 
 const schedules = ref([])
+const allSchedules = ref([])
 const queryParams = ref({
   start_date: null,
-  end_date: null
+  end_date: null,
+  employee_name: ''
 })
 
 const loadData = async () => {
@@ -70,10 +76,22 @@ const loadData = async () => {
     if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
     
     const schedRes = await scheduleApi.getAll(params)
-    schedules.value = schedRes.data
+    allSchedules.value = schedRes.data
+    applyFilter()
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
+}
+
+const applyFilter = () => {
+  if (!queryParams.value.employee_name) {
+    schedules.value = allSchedules.value
+    return
+  }
+  const keyword = queryParams.value.employee_name.toLowerCase()
+  schedules.value = allSchedules.value.filter(s => 
+    s.employee_name?.toLowerCase().includes(keyword)
+  )
 }
 
 const handleGenerate = async () => {
@@ -113,11 +131,14 @@ const handleExport = async () => {
 
 const handleDelete = async (row) => {
   try {
+    await ElMessageBox.confirm(`确定要删除 ${row.employee_name} 的排班吗?`, '提示', { type: 'warning' })
     await scheduleApi.delete(row.id)
     ElMessage.success('删除成功')
     loadData()
   } catch (error) {
-    ElMessage.error('删除失败')
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败')
+    }
   }
 }
 
