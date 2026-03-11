@@ -100,11 +100,15 @@ const handleGenerate = async () => {
       ElMessage.warning('请选择开始和结束日期')
       return
     }
-    await scheduleApi.generate(queryParams.value)
+    await scheduleApi.generate({
+      start_date: queryParams.value.start_date,
+      end_date: queryParams.value.end_date,
+      clear_existing: true
+    })
     ElMessage.success('排班生成成功')
     loadData()
   } catch (error) {
-    ElMessage.error('生成失败')
+    ElMessage.error('生成失败: ' + (error.response?.data?.detail || error.message))
   }
 }
 
