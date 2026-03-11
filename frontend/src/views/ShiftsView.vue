@@ -10,7 +10,17 @@
         </div>
       </template>
 
-      <el-table :data="shifts" stripe>
+      <el-form inline>
+        <el-form-item label="搜索">
+          <el-input v-model="searchText" placeholder="搜索班次名称" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadData">查询</el-button>
+          <el-button @click="searchText = ''; loadData()">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table :data="filteredShifts" stripe>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="name" label="班次名称" width="120" />
         <el-table-column label="时间" width="180">
@@ -68,6 +78,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { shiftApi } from '../api'
 
 const shifts = ref([])
+const searchText = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const startTime = ref('08:00')
@@ -89,6 +100,14 @@ const loadData = async () => {
     ElMessage.error('加载数据失败')
   }
 }
+
+const filteredShifts = computed(() => {
+  if (!searchText.value) return shifts.value
+  const keyword = searchText.value.toLowerCase()
+  return shifts.value.filter(shift => 
+    shift.name?.toLowerCase().includes(keyword)
+  )
+})
 
 const handleAdd = () => {
   isEdit.value = false

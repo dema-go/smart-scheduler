@@ -31,13 +31,13 @@
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column label="员工" width="120">
           <template #default="{ row }">
-            {{ getEmployeeName(row.employee_id) }}
+            {{ row.employee_name }}
           </template>
         </el-table-column>
         <el-table-column label="班次" width="120">
           <template #default="{ row }">
-            <el-tag :color="getShiftColor(row.shift_id)">
-              {{ getShiftName(row.shift_id) }}
+            <el-tag :color="row.shift_color">
+              {{ row.shift_name }}
             </el-tag>
           </template>
         </el-table-column>
@@ -55,11 +55,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { scheduleApi, employeeApi, shiftApi } from '../api'
+import { scheduleApi } from '../api'
 
 const schedules = ref([])
-const employees = ref([])
-const shifts = ref([])
 const queryParams = ref({
   start_date: null,
   end_date: null
@@ -67,37 +65,15 @@ const queryParams = ref({
 
 const loadData = async () => {
   try {
-    // 过滤掉空值
     const params = {}
     if (queryParams.value.start_date) params.start_date = queryParams.value.start_date
     if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
     
-    const [schedRes, empRes, shiftRes] = await Promise.all([
-      scheduleApi.getAll(params),
-      employeeApi.getAll(),
-      shiftApi.getAll()
-    ])
+    const schedRes = await scheduleApi.getAll(params)
     schedules.value = schedRes.data
-    employees.value = empRes.data
-    shifts.value = shiftRes.data
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
-}
-
-const getEmployeeName = (id) => {
-  const emp = employees.value.find(e => e.id === id)
-  return emp ? emp.name : '-'
-}
-
-const getShiftName = (id) => {
-  const shift = shifts.value.find(s => s.id === id)
-  return shift ? shift.name : '-'
-}
-
-const getShiftColor = (id) => {
-  const shift = shifts.value.find(s => s.id === id)
-  return shift ? shift.color : '#909399'
 }
 
 const handleGenerate = async () => {

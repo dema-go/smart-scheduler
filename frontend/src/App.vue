@@ -12,9 +12,10 @@
         class="header-menu"
       >
         <el-menu-item index="/dashboard">首页</el-menu-item>
+        <el-menu-item index="/schedules">排班管理</el-menu-item>
+        <el-menu-item index="/schedules/calendar">日历视图</el-menu-item>
         <el-menu-item index="/employees">员工管理</el-menu-item>
         <el-menu-item index="/shifts">班次管理</el-menu-item>
-        <el-menu-item index="/schedules">排班管理</el-menu-item>
       </el-menu>
     </el-header>
     <el-main class="app-main">

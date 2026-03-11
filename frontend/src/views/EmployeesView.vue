@@ -10,7 +10,17 @@
         </div>
       </template>
 
-      <el-table :data="employees" stripe>
+      <el-form inline>
+        <el-form-item label="搜索">
+          <el-input v-model="searchText" placeholder="搜索姓名/职位/电话" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadData">查询</el-button>
+          <el-button @click="searchText = ''; loadData()">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table :data="filteredEmployees" stripe>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="name" label="姓名" width="120" />
         <el-table-column prop="position" label="职位" width="120" />
@@ -73,12 +83,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { employeeApi, shiftApi } from '../api'
 
 const employees = ref([])
 const shifts = ref([])
+const searchText = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const form = ref({
@@ -97,6 +108,17 @@ const formatDays = (days) => {
   if (!days) return []
   return days.map(d => dayNames[d])
 }
+
+const filteredEmployees = computed(() => {
+  if (!searchText.value) return employees.value
+  const keyword = searchText.value.toLowerCase()
+  return employees.value.filter(emp => 
+    emp.name?.toLowerCase().includes(keyword) ||
+    emp.position?.toLowerCase().includes(keyword) ||
+    emp.phone?.includes(keyword) ||
+    emp.email?.toLowerCase().includes(keyword)
+  )
+})
 
 const loadData = async () => {
   try {

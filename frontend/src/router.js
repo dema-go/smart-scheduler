@@ -3,6 +3,7 @@ import DashboardView from './views/DashboardView.vue'
 import EmployeesView from './views/EmployeesView.vue'
 import ShiftsView from './views/ShiftsView.vue'
 import SchedulesView from './views/SchedulesView.vue'
+import SchedulesCalendarView from './views/SchedulesCalendarView.vue'
 
 const routes = [
   {
@@ -28,6 +29,11 @@ const routes = [
     path: '/schedules',
     name: 'schedules',
     component: SchedulesView
+  },
+  {
+    path: '/schedules/calendar',
+    name: 'schedules-calendar',
+    component: SchedulesCalendarView
   }
 ]
 
