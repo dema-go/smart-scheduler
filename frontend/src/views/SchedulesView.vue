@@ -5,6 +5,13 @@
         <div class="card-header">
           <span>排班管理</span>
           <div class="header-actions">
+            <el-button
+              type="danger"
+              :disabled="selectedIds.length === 0"
+              @click="handleBatchDelete"
+            >
+              <el-icon><Delete /></el-icon>批量删除 ({{ selectedIds.length }})
+            </el-button>
             <el-button type="success" @click="handleGenerate">
               <el-icon><Refresh /></el-icon>智能排班
             </el-button>
@@ -31,7 +38,13 @@
         </el-form-item>
       </el-form>
 
-      <el-table :data="schedules" stripe>
+      <el-table
+        ref="tableRef"
+        :data="schedules"
+        stripe
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column label="员工" width="120">
           <template #default="{ row }">
@@ -75,8 +88,10 @@ const getTextColor = (color) => {
   return brightness > 128 ? '#000000' : '#ffffff'
 }
 
+const tableRef = ref(null)
 const schedules = ref([])
 const allSchedules = ref([])
+const selectedIds = ref([])
 const queryParams = ref({
   start_date: null,
   end_date: null,
@@ -88,7 +103,7 @@ const loadData = async () => {
     const params = {}
     if (queryParams.value.start_date) params.start_date = queryParams.value.start_date
     if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
-    
+
     const schedRes = await scheduleApi.getAll(params)
     allSchedules.value = schedRes.data
     applyFilter()
@@ -103,9 +118,13 @@ const applyFilter = () => {
     return
   }
   const keyword = queryParams.value.employee_name.toLowerCase()
-  schedules.value = allSchedules.value.filter(s => 
+  schedules.value = allSchedules.value.filter(s =>
     s.employee_name?.toLowerCase().includes(keyword)
   )
+}
+
+const handleSelectionChange = (selection) => {
+  selectedIds.value = selection.map(item => item.id)
 }
 
 const handleGenerate = async () => {
@@ -132,7 +151,7 @@ const handleExport = async () => {
     const params = {}
     if (queryParams.value.start_date) params.start_date = queryParams.value.start_date
     if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
-    
+
     const res = await scheduleApi.export(params)
     const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     const url = window.URL.createObjectURL(blob)
@@ -156,6 +175,30 @@ const handleDelete = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除失败')
+    }
+  }
+}
+
+const handleBatchDelete = async () => {
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请先选择要删除的排班')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedIds.value.length} 条排班记录吗?`,
+      '批量删除确认',
+      { type: 'warning' }
+    )
+
+    await scheduleApi.batchDelete(selectedIds.value)
+    ElMessage.success(`成功删除 ${selectedIds.value.length} 条排班记录`)
+    selectedIds.value = []
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量删除失败: ' + (error.response?.data?.detail || error.message))
     }
   }
 }

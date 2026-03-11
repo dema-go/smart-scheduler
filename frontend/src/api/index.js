@@ -30,6 +30,7 @@ export const scheduleApi = {
   create: (data) => api.post('/schedules', data),
   update: (id, data) => api.put(`/schedules/${id}`, data),
   delete: (id) => api.delete(`/schedules/${id}`),
+  batchDelete: (ids) => api.post('/schedules/batch-delete', ids),
   generate: (params) => api.post('/schedules/generate', null, { params }),
   clear: (params) => api.delete('/schedules/clear', { params }),
   export: (params) => api.get('/schedules/export', { params, responseType: 'blob' }),

@@ -159,6 +159,35 @@ def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
     return {"message": "排班已删除"}
 
 
+@router.post("/batch-delete")
+def batch_delete_schedules(
+    ids: List[int],
+    db: Session = Depends(get_db)
+):
+    """批量删除排班"""
+    if not ids:
+        raise HTTPException(status_code=400, detail="请提供要删除的排班ID列表")
+
+    # 查询所有要删除的排班
+    schedules = db.query(Schedule).filter(Schedule.id.in_(ids)).all()
+
+    if not schedules:
+        raise HTTPException(status_code=404, detail="未找到指定的排班记录")
+
+    deleted_count = len(schedules)
+
+    # 批量删除
+    for schedule in schedules:
+        db.delete(schedule)
+
+    db.commit()
+
+    return {
+        "message": f"成功删除 {deleted_count} 条排班记录",
+        "deleted_count": deleted_count
+    }
+
+
 class GenerateRequest:
     """生成排班请求"""
     start_date: date

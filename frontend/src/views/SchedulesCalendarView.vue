@@ -26,6 +26,29 @@
         </el-button>
       </div>
 
+      <!-- 班次筛选标签 -->
+      <div class="shift-filters">
+        <el-tag
+          v-for="shift in shifts"
+          :key="shift.id"
+          :style="{ background: shift.color, borderColor: shift.color, color: '#fff' }"
+          :effect="selectedShiftFilter === shift.id ? 'dark' : 'plain'"
+          class="shift-tag"
+          @click="toggleShiftFilter(shift.id)"
+        >
+          {{ shift.name }}
+        </el-tag>
+        <el-tag
+          v-if="selectedShiftFilter !== null"
+          type="info"
+          effect="plain"
+          class="shift-tag"
+          @click="clearShiftFilter"
+        >
+          清除筛选
+        </el-tag>
+      </div>
+
       <!-- 日历主体 -->
       <div class="calendar-grid">
         <!-- 星期标题 -->
@@ -52,6 +75,7 @@
                 class="shift-item"
                 :style="{ background: shift.shift_color }"
                 :title="`${shift.employee_name} - ${shift.shift_name}`"
+                @click.stop="showShiftDetail(shift)"
               >
                 {{ shift.employee_name?.slice(0, 2) }}
               </div>
@@ -94,12 +118,64 @@
         <el-button type="primary" @click="confirmGenerate">生成</el-button>
       </template>
     </el-dialog>
+
+    <!-- 班次详情对话框 -->
+    <el-dialog v-model="detailDialogVisible" title="班次详情" width="500px">
+      <div v-if="selectedShift" class="shift-detail">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="日期">
+            {{ selectedShift.date }}
+          </el-descriptions-item>
+          <el-descriptions-item label="班次">
+            <el-tag :color="selectedShift.shift_color" effect="dark">
+              {{ selectedShift.shift_name }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="班次时间">
+            {{ getShiftTime(selectedShift.shift_type_id) }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <el-divider>员工信息</el-divider>
+
+        <el-descriptions :column="1" border v-if="selectedEmployee">
+          <el-descriptions-item label="姓名">
+            {{ selectedEmployee.name }}
+          </el-descriptions-item>
+          <el-descriptions-item label="职位">
+            {{ selectedEmployee.position || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="电话">
+            {{ selectedEmployee.phone || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="邮箱">
+            {{ selectedEmployee.email || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="可用天数">
+            {{ formatAvailableDays(selectedEmployee.available_days) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="可用时间">
+            {{ selectedEmployee.available_start_time || '-' }} - {{ selectedEmployee.available_end_time || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="偏好班次">
+            {{ getPreferredShifts(selectedEmployee.preferred_shifts) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="偏好说明">
+            {{ selectedEmployee.preference_note || '-' }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+      <template #footer>
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+        <el-button type="danger" @click="handleDeleteShift">删除排班</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleApi, employeeApi, shiftApi } from '../api'
 
 const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
@@ -111,12 +187,20 @@ const schedules = ref([])
 const employees = ref([])
 const shifts = ref([])
 
+// 班次筛选
+const selectedShiftFilter = ref(null)
+
 const generateDialogVisible = ref(false)
 const generateForm = ref({
   start_date: '',
   end_date: '',
   clear_existing: true
 })
+
+// 班次详情相关
+const detailDialogVisible = ref(false)
+const selectedShift = ref(null)
+const selectedEmployee = ref(null)
 
 // 生成日历数据
 const calendarDays = computed(() => {
@@ -184,7 +268,12 @@ const isToday = (date) => {
 }
 
 const getShiftsForDate = (dateStr) => {
-  return schedules.value.filter(s => s.date === dateStr)
+  let result = schedules.value.filter(s => s.date === dateStr)
+  // 应用班次筛选
+  if (selectedShiftFilter.value !== null) {
+    result = result.filter(s => s.shift_type_id === selectedShiftFilter.value)
+  }
+  return result
 }
 
 const prevMonth = () => {
@@ -219,7 +308,7 @@ const loadData = async () => {
     // 加载当月数据
     const startDate = formatDate(new Date(currentYear.value, currentMonth.value, 1))
     const endDate = formatDate(new Date(currentYear.value, currentMonth.value + 1, 0))
-    
+
     const [schedRes] = await Promise.all([
       scheduleApi.getAll({ start_date: startDate, end_date: endDate })
     ])
@@ -227,6 +316,26 @@ const loadData = async () => {
   } catch (error) {
     console.error('加载数据失败:', error)
     ElMessage.error('加载数据失败')
+  }
+}
+
+const loadEmployees = async () => {
+  try {
+    const res = await employeeApi.getAll()
+    employees.value = res.data
+  } catch (error) {
+    console.error('加载员工数据失败:', error)
+    ElMessage.error('加载员工数据失败')
+  }
+}
+
+const loadShifts = async () => {
+  try {
+    const res = await shiftApi.getAll()
+    shifts.value = res.data
+  } catch (error) {
+    console.error('加载班次数据失败:', error)
+    ElMessage.error('加载班次数据失败')
   }
 }
 
@@ -244,19 +353,97 @@ const confirmGenerate = async () => {
       ElMessage.warning('请选择开始和结束日期')
       return
     }
-    
+
     await scheduleApi.generate({
       start_date: generateForm.value.start_date,
       end_date: generateForm.value.end_date,
       clear_existing: generateForm.value.clear_existing
     })
-    
+
     ElMessage.success('排班生成成功')
     generateDialogVisible.value = false
     loadData()
   } catch (error) {
     ElMessage.error('生成失败: ' + (error.response?.data?.detail || error.message))
   }
+}
+
+// 显示班次详情
+const showShiftDetail = (shift) => {
+  selectedShift.value = shift
+  // 查找对应的员工信息
+  selectedEmployee.value = employees.value.find(e => e.id === shift.employee_id)
+  detailDialogVisible.value = true
+}
+
+// 根据班次类型ID获取班次时间字符串
+const getShiftTime = (shiftTypeId) => {
+  const shift = shifts.value.find(s => s.id === shiftTypeId)
+  if (!shift) return '-'
+  return `${shift.start_time} - ${shift.end_time}`
+}
+
+// 将数字数组格式化为中文星期字符串
+const formatAvailableDays = (availableDays) => {
+  if (!availableDays || !Array.isArray(availableDays) || availableDays.length === 0) {
+    return '-'
+  }
+  const weekDayMap = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  return availableDays.map(day => weekDayMap[day]).join('、')
+}
+
+// 获取偏好班次名称列表
+const getPreferredShifts = (preferredShifts) => {
+  if (!preferredShifts || !Array.isArray(preferredShifts) || preferredShifts.length === 0) {
+    return '-'
+  }
+  const shiftNames = preferredShifts
+    .map(shiftId => {
+      const shift = shifts.value.find(s => s.id === shiftId)
+      return shift ? shift.name : ''
+    })
+    .filter(name => name)
+  return shiftNames.join('、') || '-'
+}
+
+// 删除当前选中的排班
+const handleDeleteShift = async () => {
+  if (!selectedShift.value) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除 ${selectedShift.value.employee_name} 在 ${selectedShift.value.date} 的排班吗？`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await scheduleApi.delete(selectedShift.value.id)
+    ElMessage.success('删除成功')
+    detailDialogVisible.value = false
+    loadData()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+}
+
+// 切换班次筛选
+const toggleShiftFilter = (shiftId) => {
+  if (selectedShiftFilter.value === shiftId) {
+    selectedShiftFilter.value = null
+  } else {
+    selectedShiftFilter.value = shiftId
+  }
+}
+
+// 清除班次筛选
+const clearShiftFilter = () => {
+  selectedShiftFilter.value = null
 }
 
 // 监听月份变化重新加载
@@ -267,6 +454,8 @@ watch(
 
 onMounted(() => {
   loadData()
+  loadEmployees()
+  loadShifts()
 })
 </script>
 
@@ -287,6 +476,25 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   margin-bottom: 20px;
+}
+
+.shift-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.shift-tag {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.shift-tag:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
 }
 
 .current-month {
