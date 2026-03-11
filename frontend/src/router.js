@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import DashboardView from './views/DashboardView.vue'
 import EmployeesView from './views/EmployeesView.vue'
 import ShiftsView from './views/ShiftsView.vue'
 import SchedulesView from './views/SchedulesView.vue'
@@ -6,7 +7,12 @@ import SchedulesView from './views/SchedulesView.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/schedules'
+    redirect: '/dashboard'
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: DashboardView
   },
   {
     path: '/employees',
