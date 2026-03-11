@@ -61,14 +61,19 @@ const schedules = ref([])
 const employees = ref([])
 const shifts = ref([])
 const queryParams = ref({
-  start_date: '',
-  end_date: ''
+  start_date: null,
+  end_date: null
 })
 
 const loadData = async () => {
   try {
+    // 过滤掉空值
+    const params = {}
+    if (queryParams.value.start_date) params.start_date = queryParams.value.start_date
+    if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
+    
     const [schedRes, empRes, shiftRes] = await Promise.all([
-      scheduleApi.getAll(queryParams.value),
+      scheduleApi.getAll(params),
       employeeApi.getAll(),
       shiftApi.getAll()
     ])
@@ -111,7 +116,12 @@ const handleGenerate = async () => {
 
 const handleExport = async () => {
   try {
-    const res = await scheduleApi.export(queryParams.value)
+    // 过滤掉空值
+    const params = {}
+    if (queryParams.value.start_date) params.start_date = queryParams.value.start_date
+    if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
+    
+    const res = await scheduleApi.export(params)
     const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
