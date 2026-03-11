@@ -10,6 +10,9 @@ class EmployeeBase(BaseModel):
     email: Optional[str] = None
     available_days: List[int] = []
     preferred_shifts: List[int] = []
+    available_start_time: Optional[str] = None
+    available_end_time: Optional[str] = None
+    preference_note: Optional[str] = None
 
 
 class EmployeeCreate(EmployeeBase):

@@ -19,6 +19,13 @@ class Employee(Base):
     # 偏好班次：班次ID列表
     preferred_shifts = Column(JSON, default=list)
 
+    # 可用时间范围
+    available_start_time = Column(String(10), nullable=True)
+    available_end_time = Column(String(10), nullable=True)
+
+    # 偏好说明
+    preference_note = Column(String(500), nullable=True)
+
     # 班次分配记录
     schedules = relationship("Schedule", back_populates="employee")
 

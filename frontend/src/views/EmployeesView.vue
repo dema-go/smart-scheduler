@@ -33,6 +33,14 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="偏好班次" width="150">
+          <template #default="{ row }">
+            <el-tag v-for="shiftId in row.preferred_shifts" :key="shiftId" size="small" :color="getShiftColor(shiftId)" style="margin-right: 4px; color: #fff">
+              {{ getShiftName(shiftId) }}
+            </el-tag>
+            <span v-if="!row.preferred_shifts?.length" style="color: #999">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
@@ -107,6 +115,16 @@ const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '�
 const formatDays = (days) => {
   if (!days) return []
   return days.map(d => dayNames[d])
+}
+
+const getShiftName = (shiftId) => {
+  const shift = shifts.value.find(s => s.id === shiftId)
+  return shift?.name || ''
+}
+
+const getShiftColor = (shiftId) => {
+  const shift = shifts.value.find(s => s.id === shiftId)
+  return shift?.color || '#409EFF'
 }
 
 const filteredEmployees = computed(() => {
