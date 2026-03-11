@@ -32,7 +32,8 @@ export const scheduleApi = {
   delete: (id) => api.delete(`/schedules/${id}`),
   generate: (params) => api.post('/schedules/generate', null, { params }),
   clear: (params) => api.delete('/schedules/clear', { params }),
-  export: (params) => api.get('/schedules/export', { params, responseType: 'blob' })
+  export: (params) => api.get('/schedules/export', { params, responseType: 'blob' }),
+  getStats: (year, month) => api.get('/schedules/stats', { params: { year, month } })
 }
 
 export default api

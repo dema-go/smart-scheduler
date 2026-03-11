@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from sqlalchemy import func
+from typing import List, Optional, Dict, Any
 from datetime import date
+from calendar import monthrange
 from app.models import get_db
 from app.models.schedule import Schedule
+from app.models.employee import Employee
+from app.models.shift import ShiftType
 from app.schemas.schedule import ScheduleCreate, ScheduleUpdate, ScheduleResponse, ScheduleWithDetails
 from app.services.scheduler import SchedulerService
 
@@ -43,6 +47,61 @@ def get_schedules(
         ))
 
     return result
+
+
+@router.get("/stats")
+def get_schedule_stats(
+    year: int = Query(..., description="年份"),
+    month: int = Query(..., ge=1, le=12, description="月份"),
+    db: Session = Depends(get_db)
+):
+    """获取员工排班统计"""
+    try:
+        # 计算月份的第一天和最后一天
+        first_day = date(year, month, 1)
+        _, last_day_num = monthrange(year, month)
+        last_day = date(year, month, last_day_num)
+
+        # 获取所有员工
+        employees = db.query(Employee).filter(Employee.is_active == True).all()
+        if not employees:
+            return {"year": year, "month": month, "employees": []}
+
+        # 获取该月所有排班记录
+        schedules = db.query(Schedule).filter(
+            Schedule.date >= first_day,
+            Schedule.date <= last_day
+        ).all()
+
+        # 构建员工排班统计
+        employee_stats = []
+        for emp in employees:
+            # 该员工的排班记录
+            emp_schedules = [s for s in schedules if s.employee_id == emp.id]
+
+            # 统计排班天数（按日期去重）
+            schedule_dates = set(s.date for s in emp_schedules)
+
+            # 统计班次分布
+            shift_distribution = {}
+            for s in emp_schedules:
+                shift_name = s.shift_type.name if s.shift_type else "未知"
+                shift_distribution[shift_name] = shift_distribution.get(shift_name, 0) + 1
+
+            employee_stats.append({
+                "employee_id": emp.id,
+                "employee_name": emp.name,
+                "total_days": len(schedule_dates),
+                "shift_distribution": shift_distribution
+            })
+
+        return {
+            "year": year,
+            "month": month,
+            "employees": employee_stats
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取统计数据失败: {str(e)}")
 
 
 @router.get("/{schedule_id}", response_model=ScheduleWithDetails)
@@ -145,3 +204,4 @@ def clear_schedules(
 
     deleted = service.clear_schedule(start_date, end_date)
     return {"message": f"已清除 {deleted} 条排班记录"}
+
