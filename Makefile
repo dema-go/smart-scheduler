@@ -19,7 +19,10 @@ install:
 
 dev:
 	@echo "启动开发模式 (前后端)..."
+	@echo "启动后端服务 (端口 8000)..."
 	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+	@sleep 3
+	@echo "启动前端服务 (端口 5173)..."
 	@cd frontend && npm run dev
 
 backend:
