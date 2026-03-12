@@ -18,6 +18,9 @@ install:
 	@cd frontend && npm install
 
 dev:
+	@echo "停止可能占用端口的服务..."
+	@pkill -f "uvicorn app.main:app" 2>/dev/null || true
+	@sleep 1
 	@echo "启动开发模式 (前后端)..."
 	@echo "启动后端服务 (端口 8000)..."
 	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
@@ -26,6 +29,9 @@ dev:
 	@cd frontend && npm run dev
 
 backend:
+	@echo "停止可能占用端口的服务..."
+	@pkill -f "uvicorn app.main:app" 2>/dev/null || true
+	@sleep 1
 	@echo "启动后端服务..."
 	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
