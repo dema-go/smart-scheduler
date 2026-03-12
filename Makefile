@@ -21,15 +21,15 @@ dev: backend frontend
 
 backend:
 	@echo "启动后端服务..."
-	cd backend && source venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 frontend:
 	@echo "启动前端服务..."
-	cd frontend && pnpm dev
+	@cd frontend && pnpm dev
 
 all:
 	@echo "以后台模式启动前后端服务..."
-	@cd backend && source venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+	@cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
 	@cd frontend && nohup pnpm dev > frontend.log 2>&1 &
 	@echo "后端已启动: http://localhost:8000"
 	@echo "前端已启动: http://localhost:5173"
