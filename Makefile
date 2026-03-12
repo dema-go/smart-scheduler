@@ -17,32 +17,33 @@ install:
 	@echo "安装前端依赖..."
 	@cd frontend && npm install
 
-dev:
-	@echo "停止可能占用端口的服务..."
-	@pkill -f "uvicorn app.main:app" 2>/dev/null || true
-	@sleep 1
+dev: clean
 	@echo "启动开发模式 (前后端)..."
 	@echo "启动后端服务 (端口 8000)..."
-	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
-	@sleep 3
+	@(cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > backend.log 2>&1 &)
+	@echo "等待后端启动..."
+	@sleep 5
 	@echo "启动前端服务 (端口 5173)..."
-	@cd frontend && npm run dev
+	@(cd frontend && nohup npm run dev > frontend.log 2>&1 &)
+	@echo "启动完成!"
+	@echo "后端: http://localhost:8000"
+	@echo "前端: http://localhost:5173"
 
-backend:
-	@echo "停止可能占用端口的服务..."
-	@pkill -f "uvicorn app.main:app" 2>/dev/null || true
-	@sleep 1
+backend: clean
 	@echo "启动后端服务..."
-	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+	@(cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > backend.log 2>&1 &)
+	@echo "后端已启动: http://localhost:8000"
 
 frontend:
 	@echo "启动前端服务..."
-	@cd frontend && npm run dev
+	@(cd frontend && nohup npm run dev > frontend.log 2>&1 &)
+	@echo "前端已启动: http://localhost:5173"
 
-all:
+all: clean
 	@echo "以后台模式启动前后端服务..."
-	@cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
-	@cd frontend && nohup npm run dev > frontend.log 2>&1 &
+	@(cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &)
+	@sleep 2
+	@(cd frontend && nohup npm run dev > frontend.log 2>&1 &)
 	@echo "后端已启动: http://localhost:8000"
 	@echo "前端已启动: http://localhost:5173"
 
