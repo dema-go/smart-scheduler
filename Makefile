@@ -17,7 +17,10 @@ install:
 	@echo "安装前端依赖..."
 	cd frontend && pnpm install
 
-dev: backend frontend
+dev:
+	@echo "启动开发模式 (前后端)..."
+	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+	@cd frontend && pnpm dev
 
 backend:
 	@echo "启动后端服务..."
