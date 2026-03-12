@@ -13,14 +13,14 @@ help:
 
 install:
 	@echo "安装后端依赖..."
-	cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+	@cd backend && python3 -m venv venv && . venv/bin/activate && pip install -r requirements.txt
 	@echo "安装前端依赖..."
-	cd frontend && pnpm install
+	@cd frontend && npm install
 
 dev:
 	@echo "启动开发模式 (前后端)..."
 	@cd backend && . venv/bin/activate && PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
-	@cd frontend && pnpm dev
+	@cd frontend && npm run dev
 
 backend:
 	@echo "启动后端服务..."
@@ -28,12 +28,12 @@ backend:
 
 frontend:
 	@echo "启动前端服务..."
-	@cd frontend && pnpm dev
+	@cd frontend && npm run dev
 
 all:
 	@echo "以后台模式启动前后端服务..."
 	@cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
-	@cd frontend && nohup pnpm dev > frontend.log 2>&1 &
+	@cd frontend && nohup npm run dev > frontend.log 2>&1 &
 	@echo "后端已启动: http://localhost:8000"
 	@echo "前端已启动: http://localhost:5173"
 
