@@ -4,6 +4,7 @@ import EmployeesView from './views/EmployeesView.vue'
 import ShiftsView from './views/ShiftsView.vue'
 import SchedulesView from './views/SchedulesView.vue'
 import SchedulesCalendarView from './views/SchedulesCalendarView.vue'
+import TeamsView from './views/TeamsView.vue'
 import PreferencesView from './views/PreferencesView.vue'
 
 const routes = [
@@ -20,6 +21,11 @@ const routes = [
     path: '/employees',
     name: 'employees',
     component: EmployeesView
+  },
+  {
+    path: '/teams',
+    name: 'teams',
+    component: TeamsView
   },
   {
     path: '/shifts',

@@ -32,9 +32,14 @@
         <el-form-item label="员工">
           <el-input v-model="queryParams.employee_name" placeholder="搜索员工" clearable style="width: 120px" />
         </el-form-item>
+        <el-form-item label="班组">
+          <el-select v-model="queryParams.team_id" placeholder="选择班组" clearable style="width: 150px">
+            <el-option v-for="team in teams" :key="team.id" :label="team.name" :value="team.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="queryParams = { start_date: null, end_date: null, employee_name: '' }">重置</el-button>
+          <el-button @click="queryParams = { start_date: null, end_date: null, employee_name: '', team_id: null }">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -59,20 +64,57 @@
           </template>
         </el-table-column>
         <el-table-column prop="date" label="日期" width="120" />
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
+            <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
             <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.page_size"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="pagination.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
+        />
+      </div>
     </el-card>
+
+    <!-- 编辑对话框 -->
+    <el-dialog v-model="editDialogVisible" title="编辑排班" width="400px">
+      <el-form :model="editForm" label-width="80px">
+        <el-form-item label="员工">
+          <el-select v-model="editForm.employee_id" placeholder="选择员工" style="width: 100%">
+            <el-option v-for="emp in employees" :key="emp.id" :label="emp.name" :value="emp.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="班次">
+          <el-select v-model="editForm.shift_id" placeholder="选择班次" style="width: 100%">
+            <el-option v-for="shift in shifts" :key="shift.id" :label="shift.name" :value="shift.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="日期">
+          <el-date-picker v-model="editForm.date" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleEditSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { scheduleApi } from '../api'
+import { scheduleApi, employeeApi, shiftApi, teamApi } from '../api'
 
 // 根据背景色计算文字颜色（深色背景用白色文字，浅色背景用黑色文字）
 const getTextColor = (color) => {
@@ -90,37 +132,84 @@ const getTextColor = (color) => {
 
 const tableRef = ref(null)
 const schedules = ref([])
-const allSchedules = ref([])
 const selectedIds = ref([])
 const queryParams = ref({
   start_date: null,
   end_date: null,
-  employee_name: ''
+  employee_name: '',
+  team_id: null
 })
+
+// 分页相关
+const pagination = ref({
+  page: 1,
+  page_size: 20,
+  total: 0
+})
+
+// 编辑相关
+const editDialogVisible = ref(false)
+const editForm = ref({
+  id: null,
+  employee_id: null,
+  shift_id: null,
+  date: null
+})
+const employees = ref([])
+const shifts = ref([])
+const teams = ref([])
 
 const loadData = async () => {
   try {
-    const params = {}
+    const params = {
+      page: pagination.value.page,
+      page_size: pagination.value.page_size
+    }
     if (queryParams.value.start_date) params.start_date = queryParams.value.start_date
     if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
 
-    const schedRes = await scheduleApi.getAll(params)
-    allSchedules.value = schedRes.data
-    applyFilter()
+    const [schedRes, empRes, shiftRes, teamRes] = await Promise.all([
+      scheduleApi.getAll(params),
+      employeeApi.getAll(),
+      shiftApi.getAll(),
+      teamApi.getAll()
+    ])
+
+    // 后端返回分页数据结构
+    const items = schedRes.data.items
+    pagination.value.total = schedRes.data.total
+    employees.value = empRes.data
+    shifts.value = shiftRes.data
+    teams.value = teamRes.data
+
+    // 客户端过滤员工名称
+    applyFilter(items)
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
 }
 
-const applyFilter = () => {
+const applyFilter = (items) => {
+  // 员工名称过滤在客户端进行，因为后端只支持 employee_id 过滤
   if (!queryParams.value.employee_name) {
-    schedules.value = allSchedules.value
+    schedules.value = items || []
     return
   }
   const keyword = queryParams.value.employee_name.toLowerCase()
-  schedules.value = allSchedules.value.filter(s =>
+  schedules.value = (items || []).filter(s =>
     s.employee_name?.toLowerCase().includes(keyword)
   )
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  loadData()
+}
+
+const handleSizeChange = (size) => {
+  pagination.value.page_size = size
+  pagination.value.page = 1
+  loadData()
 }
 
 const handleSelectionChange = (selection) => {
@@ -133,11 +222,15 @@ const handleGenerate = async () => {
       ElMessage.warning('请选择开始和结束日期')
       return
     }
-    await scheduleApi.generate({
+    const params = {
       start_date: queryParams.value.start_date,
       end_date: queryParams.value.end_date,
       clear_existing: true
-    })
+    }
+    if (queryParams.value.team_id) {
+      params.team_id = queryParams.value.team_id
+    }
+    await scheduleApi.generate(params)
     ElMessage.success('排班生成成功')
     loadData()
   } catch (error) {
@@ -203,6 +296,31 @@ const handleBatchDelete = async () => {
   }
 }
 
+const handleEdit = (row) => {
+  editForm.value = {
+    id: row.id,
+    employee_id: row.employee_id,
+    shift_id: row.shift_id,
+    date: row.date
+  }
+  editDialogVisible.value = true
+}
+
+const handleEditSubmit = async () => {
+  try {
+    await scheduleApi.update(editForm.value.id, {
+      employee_id: editForm.value.employee_id,
+      shift_id: editForm.value.shift_id,
+      date: editForm.value.date
+    })
+    ElMessage.success('更新成功')
+    editDialogVisible.value = false
+    loadData()
+  } catch (error) {
+    ElMessage.error('更新失败: ' + (error.response?.data?.detail || error.message))
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -223,5 +341,11 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 10px;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

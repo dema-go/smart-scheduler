@@ -24,4 +24,5 @@ def init_db():
     from app.models.employee import Employee
     from app.models.shift import ShiftType
     from app.models.schedule import Schedule
+    from app.models.team import Team
     Base.metadata.create_all(bind=engine)

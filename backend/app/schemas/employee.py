@@ -13,6 +13,7 @@ class EmployeeBase(BaseModel):
     available_start_time: Optional[str] = None
     available_end_time: Optional[str] = None
     preference_note: Optional[str] = None
+    team_id: Optional[int] = None
 
 
 class EmployeeCreate(EmployeeBase):
@@ -26,6 +27,7 @@ class EmployeeUpdate(EmployeeBase):
 class EmployeeResponse(EmployeeBase):
     id: int
     is_active: bool
+    team_name: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -34,7 +34,16 @@ export const scheduleApi = {
   generate: (params) => api.post('/schedules/generate', null, { params }),
   clear: (params) => api.delete('/schedules/clear', { params }),
   export: (params) => api.get('/schedules/export', { params, responseType: 'blob' }),
-  getStats: (year, month) => api.get('/schedules/stats', { params: { year, month } })
+  getStats: (params) => api.get('/schedules/stats', { params })
+}
+
+// 班组 API
+export const teamApi = {
+  getAll: () => api.get('/teams'),
+  getById: (id) => api.get(`/teams/${id}`),
+  create: (data) => api.post('/teams', data),
+  update: (id, data) => api.put(`/teams/${id}`, data),
+  delete: (id) => api.delete(`/teams/${id}`)
 }
 
 export default api

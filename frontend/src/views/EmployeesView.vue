@@ -26,6 +26,7 @@
         <el-table-column prop="position" label="职位" width="120" />
         <el-table-column prop="phone" label="电话" width="140" />
         <el-table-column prop="email" label="邮箱" min-width="180" />
+        <el-table-column prop="team_name" label="所属班组" width="120" />
         <el-table-column label="可用日期" width="150">
           <template #default="{ row }">
             <el-tag v-for="day in formatDays(row.available_days)" :key="day" size="small" style="margin-right: 4px">
@@ -81,6 +82,11 @@
             <el-option v-for="shift in shifts" :key="shift.id" :label="shift.name" :value="shift.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="所属班组">
+          <el-select v-model="form.team_id" placeholder="选择班组" clearable style="width: 100%">
+            <el-option v-for="team in teams" :key="team.id" :label="team.name" :value="team.id" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -93,10 +99,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { employeeApi, shiftApi } from '../api'
+import { employeeApi, shiftApi, teamApi } from '../api'
 
 const employees = ref([])
 const shifts = ref([])
+const teams = ref([])
 const searchText = ref('')
 const dialogVisible = ref(false)
 const isEdit = ref(false)
@@ -107,7 +114,8 @@ const form = ref({
   phone: '',
   email: '',
   available_days: [],
-  preferred_shifts: []
+  preferred_shifts: [],
+  team_id: null
 })
 
 const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
@@ -140,12 +148,14 @@ const filteredEmployees = computed(() => {
 
 const loadData = async () => {
   try {
-    const [empRes, shiftRes] = await Promise.all([
+    const [empRes, shiftRes, teamRes] = await Promise.all([
       employeeApi.getAll(),
-      shiftApi.getAll()
+      shiftApi.getAll(),
+      teamApi.getAll()
     ])
     employees.value = empRes.data
     shifts.value = shiftRes.data
+    teams.value = teamRes.data
   } catch (error) {
     ElMessage.error('加载数据失败')
   }
@@ -160,7 +170,8 @@ const handleAdd = () => {
     phone: '',
     email: '',
     available_days: [],
-    preferred_shifts: []
+    preferred_shifts: [],
+    team_id: null
   }
   dialogVisible.value = true
 }

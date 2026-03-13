@@ -67,10 +67,14 @@ class SchedulerService:
 
         return last_schedule.shift_type_id if last_schedule else 0
 
-    def get_available_employees(self, shift_type: ShiftType, shift_date: date) -> List[Employee]:
+    def get_available_employees(self, shift_type: ShiftType, shift_date: date, team_id: int = None) -> List[Employee]:
         """获取可用的员工列表"""
         # 获取所有活跃员工
-        all_employees = self.db.query(Employee).filter(Employee.is_active == True).all()
+        query = self.db.query(Employee).filter(Employee.is_active == True)
+        # 如果指定了班组，只获取该班组的员工
+        if team_id is not None:
+            query = query.filter(Employee.team_id == team_id)
+        all_employees = query.all()
 
         # 获取指定日期的星期几 (0=周一, 6=周日)
         weekday = shift_date.weekday()
@@ -143,15 +147,18 @@ class SchedulerService:
 
         return score
 
-    def generate_schedule(self, start_date: date, end_date: date) -> List[Dict[str, Any]]:
+    def generate_schedule(self, start_date: date, end_date: date, team_id: int = None) -> List[Dict[str, Any]]:
         """生成排班"""
         # 获取所有活跃的班次类型
         shift_types = self.db.query(ShiftType).filter(ShiftType.is_active == True).all()
         if not shift_types:
             return []
 
-        # 获取所有活跃的员工
-        employees = self.db.query(Employee).filter(Employee.is_active == True).all()
+        # 获取所有活跃的员工（可按班组筛选）
+        query = self.db.query(Employee).filter(Employee.is_active == True)
+        if team_id is not None:
+            query = query.filter(Employee.team_id == team_id)
+        employees = query.all()
         if not employees:
             return []
 
@@ -180,7 +187,7 @@ class SchedulerService:
                 # 需要分配的人数
                 for _ in range(shift_type.required_count):
                     # 获取可用员工
-                    available_employees = self.get_available_employees(shift_type, current_date)
+                    available_employees = self.get_available_employees(shift_type, current_date, team_id)
                     if not available_employees:
                         continue
 

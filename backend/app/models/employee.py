@@ -12,6 +12,7 @@ class Employee(Base):
     phone = Column(String(20), nullable=True)
     email = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
 
     # 可用性：每周可用天数 (0=周一, 6=周日)
     available_days = Column(JSON, default=list)
@@ -25,6 +26,9 @@ class Employee(Base):
 
     # 偏好说明
     preference_note = Column(String(500), nullable=True)
+
+    # 班组关联
+    team = relationship("Team", back_populates="employees")
 
     # 班次分配记录
     schedules = relationship("Schedule", back_populates="employee")

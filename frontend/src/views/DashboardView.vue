@@ -100,18 +100,28 @@
         <el-card>
           <template #header>
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span>本月员工排班统计</span>
-              <el-select v-model="statsYearMonth.year" size="small" style="width: 100px; margin-right: 10px" @change="loadStats">
-                <el-option v-for="y in availableYears" :key="y" :label="y + '年'" :value="y" />
-              </el-select>
-              <el-select v-model="statsYearMonth.month" size="small" style="width: 80px" @change="loadStats">
-                <el-option v-for="m in 12" :key="m" :label="m + '月'" :value="m" />
-              </el-select>
+              <span>{{ statsType === 'week' ? '本周' : '本月' }}员工排班统计</span>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <el-radio-group v-model="statsType" size="small" @change="handleStatsTypeChange">
+                  <el-radio-button value="week">按周</el-radio-button>
+                  <el-radio-button value="month">按月</el-radio-button>
+                </el-radio-group>
+                <el-select v-model="statsYearMonth.year" size="small" style="width: 100px;" @change="loadStats">
+                  <el-option v-for="y in availableYears" :key="y" :label="y + '年'" :value="y" />
+                </el-select>
+                <el-select v-if="statsType === 'month'" v-model="statsYearMonth.month" size="small" style="width: 80px" @change="loadStats">
+                  <el-option v-for="m in 12" :key="m" :label="m + '月'" :value="m" />
+                </el-select>
+                <el-select v-if="statsType === 'week'" v-model="statsYearMonth.week" size="small" style="width: 100px" @change="loadStats">
+                  <el-option v-for="w in availableWeeks" :key="w" :label="'第' + w + '周'" :value="w" />
+                </el-select>
+              </div>
             </div>
           </template>
           <el-table :data="employeeStats" stripe v-if="employeeStats.length">
             <el-table-column prop="employee_name" label="员工" />
-            <el-table-column prop="total_days" label="本月排班天数" width="150" />
+            <el-table-column :label="statsType === 'week' ? '本周排班天数' : '本月排班天数'" width="150" />
+            <el-table-column prop="total_hours" label="累计工作时长(小时)" width="150" />
             <el-table-column label="班次分布">
               <template #default="{ row }">
                 <el-tag v-for="(count, shift) in row.shift_distribution" :key="shift"
@@ -148,15 +158,44 @@ const todaySchedules = ref([])
 // 员工排班统计
 const employeeStats = ref([])
 const currentYear = new Date().getFullYear()
+const statsType = ref('month')
 const statsYearMonth = reactive({
   year: currentYear,
-  month: new Date().getMonth() + 1
+  month: new Date().getMonth() + 1,
+  week: getISOWeek(new Date())
 })
 const availableYears = [currentYear - 1, currentYear, currentYear + 1]
+const availableWeeks = Array.from({ length: 53 }, (_, i) => i + 1)
+
+// 获取 ISO 周数
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+}
+
+// 切换统计类型时更新周数
+const handleStatsTypeChange = () => {
+  if (statsType.value === 'week') {
+    statsYearMonth.week = getISOWeek(new Date())
+  }
+  loadStats()
+}
 
 const loadStats = async () => {
   try {
-    const res = await scheduleApi.getStats(statsYearMonth.year, statsYearMonth.month)
+    const params = {
+      type: statsType.value,
+      year: statsYearMonth.year
+    }
+    if (statsType.value === 'week') {
+      params.week = statsYearMonth.week
+    } else {
+      params.month = statsYearMonth.month
+    }
+    const res = await scheduleApi.getStats(params)
     employeeStats.value = res.data.employees || []
   } catch (error) {
     console.error('加载统计数据失败:', error)

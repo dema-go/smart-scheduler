@@ -1,6 +1,18 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List, Generic, TypeVar
 from datetime import date
+
+
+# 泛型分页响应模型
+T = TypeVar('T')
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """分页响应通用模型"""
+    total: int
+    page: int
+    page_size: int
+    items: List[T]
 
 
 class ScheduleBase(BaseModel):

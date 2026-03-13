@@ -77,7 +77,7 @@
                 :title="`${shift.employee_name} - ${shift.shift_name}`"
                 @click.stop="showShiftDetail(shift)"
               >
-                {{ shift.employee_name?.slice(0, 2) }}
+                {{ shift.employee_name }} {{ shift.shift_name }}
               </div>
               <div v-if="day.shifts.length > 3" class="more-shifts">
                 +{{ day.shifts.length - 3 }}
@@ -309,10 +309,12 @@ const loadData = async () => {
     const startDate = formatDate(new Date(currentYear.value, currentMonth.value, 1))
     const endDate = formatDate(new Date(currentYear.value, currentMonth.value + 1, 0))
 
+    // 设置较大的 page_size 以获取当月所有数据
     const [schedRes] = await Promise.all([
-      scheduleApi.getAll({ start_date: startDate, end_date: endDate })
+      scheduleApi.getAll({ start_date: startDate, end_date: endDate, page: 1, page_size: 1000 })
     ])
-    schedules.value = schedRes.data
+    // 后端返回分页数据结构，需要访问 items
+    schedules.value = schedRes.data.items || []
   } catch (error) {
     console.error('加载数据失败:', error)
     ElMessage.error('加载数据失败')

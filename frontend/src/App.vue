@@ -15,6 +15,7 @@
         <el-menu-item index="/schedules">排班管理</el-menu-item>
         <el-menu-item index="/schedules/calendar">日历视图</el-menu-item>
         <el-menu-item index="/employees">员工管理</el-menu-item>
+        <el-menu-item index="/teams">班组管理</el-menu-item>
         <el-menu-item index="/shifts">班次管理</el-menu-item>
         <el-menu-item index="/preferences">偏好设置</el-menu-item>
       </el-menu>
