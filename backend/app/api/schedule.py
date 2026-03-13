@@ -20,7 +20,7 @@ def get_schedules(
     end_date: Optional[date] = None,
     employee_id: Optional[int] = None,
     page: int = Query(1, ge=1, description="页码，从1开始"),
-    page_size: int = Query(20, ge=1, le=100, description="每页数量，最大100"),
+    page_size: int = Query(20, ge=1, le=500, description="每页数量，最大500"),
     db: Session = Depends(get_db)
 ):
     """获取排班列表（支持分页）"""

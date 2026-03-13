@@ -221,13 +221,16 @@ const loadData = async () => {
     stats.value.employeeCount = empRes.data.length
     stats.value.shiftCount = shiftRes.data.length
 
+    // 处理分页响应结构
+    const schedules = schedRes.data.items || schedRes.data || []
+
     // 今日排班
-    const todaySched = schedRes.data.filter(s => s.date === todayStr)
+    const todaySched = schedules.filter(s => s.date === todayStr)
     todaySchedules.value = todaySched
     stats.value.todayScheduleCount = todaySched.length
 
     // 本周排班
-    stats.value.weekScheduleCount = schedRes.data.length
+    stats.value.weekScheduleCount = schedules.length
   } catch (error) {
     ElMessage.error('加载数据失败')
   }

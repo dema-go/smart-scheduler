@@ -311,7 +311,7 @@ const loadData = async () => {
 
     // 设置较大的 page_size 以获取当月所有数据
     const [schedRes] = await Promise.all([
-      scheduleApi.getAll({ start_date: startDate, end_date: endDate, page: 1, page_size: 1000 })
+      scheduleApi.getAll({ start_date: startDate, end_date: endDate, page: 1, page_size: 500 })
     ])
     // 后端返回分页数据结构，需要访问 items
     schedules.value = schedRes.data.items || []
