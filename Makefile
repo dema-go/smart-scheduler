@@ -20,19 +20,19 @@ install:
 dev: clean
 	@echo "启动开发模式 (前后端)..."
 	@echo "启动后端服务 (端口 8000)..."
-	@(cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > backend.log 2>&1 &)
-	@echo "等待后端启动..."
-	@sleep 5
+	@cd backend && source venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > ../backend.log 2>&1 &
+	@sleep 3
 	@echo "启动前端服务 (端口 5173)..."
 	@echo "提示: 外部设备访问用 http://172.22.236.122:5173"
-	@(cd frontend && VITE_API_TARGET=http://127.0.0.1:8000 nohup npm run dev -- --host > frontend.log 2>&1 &)
+	@cd frontend && VITE_API_TARGET=http://127.0.0.1:8000 nohup npm run dev -- --host > ../frontend.log 2>&1 &
 	@echo "启动完成!"
 	@echo "本机访问: http://localhost:5173"
 	@echo "外部访问: http://172.22.236.122:5173"
 
 backend: clean
 	@echo "启动后端服务..."
-	@(cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > backend.log 2>&1 &)
+	@cd backend && source venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > ../backend.log 2>&1 &
+	@sleep 3
 	@echo "后端已启动: http://127.0.0.1:8000"
 
 frontend:
@@ -42,9 +42,9 @@ frontend:
 
 all: clean
 	@echo "以后台模式启动前后端服务..."
-	@(cd backend && . venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &)
-	@sleep 2
-	@(cd frontend && nohup npm run dev > frontend.log 2>&1 &)
+	@cd backend && source venv/bin/activate && PYTHONPATH=. nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > ../backend.log 2>&1 &
+	@sleep 3
+	@cd frontend && nohup npm run dev > ../frontend.log 2>&1 &
 	@echo "后端已启动: http://localhost:8000"
 	@echo "前端已启动: http://localhost:5173"
 
