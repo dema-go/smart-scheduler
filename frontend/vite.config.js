@@ -1,9 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-// WSL 环境下使用 WSL 的 IP，Windows 环境使用 localhost
-// 根据 VITE_API_TARGET 环境变量动态配置
-const target = process.env.VITE_API_TARGET || 'http://127.0.0.1:8000'
+// 后端 API 地址
+const target = 'http://127.0.0.1:8000'
 
 export default defineConfig({
   plugins: [vue()],
