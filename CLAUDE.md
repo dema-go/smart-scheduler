@@ -2,13 +2,15 @@
 
 ## 项目概述
 
-这是一个基于 Python FastAPI + Vue 3 的智能排班系统，支持员工信息管理、班次类型管理、智能排班算法和排班结果导出。
+这是一个基于 Python FastAPI + Vue 3 的智能排班系统，支持员工信息管理、班组管理、班次类型管理、智能排班算法和排班结果导出。
 
 ## 技术栈
 
-- **后端**: Python 3.10+, FastAPI, SQLAlchemy, SQLite
-- **前端**: Vue 3, Vite, Pinia, Element Plus
+- **后端**: Python 3.11+, FastAPI, SQLAlchemy 2.0, SQLite, Alembic
+- **前端**: Vue 3, Vite, Pinia, Element Plus, TypeScript
 - **排班算法**: 贪心算法 + 约束满足
+- **测试**: pytest, httpx
+- **部署**: Docker, docker-compose, GitHub Actions CI/CD
 
 ## 项目结构
 
@@ -16,123 +18,182 @@
 smart-scheduler/
 ├── backend/                    # 后端服务
 │   ├── app/
-│   │   ├── api/               # API 路由 (employee.py, shift.py, export.py)
-│   │   ├── models/            # 数据库模型 (employee.py, shift.py, schedule.py)
+│   │   ├── api/               # API 路由
+│   │   │   ├── employee.py    # 员工管理
+│   │   │   ├── shift.py       # 班次管理
+│   │   │   ├── schedule.py    # 排班管理
+│   │   │   └── team.py        # 班组管理
+│   │   ├── models/            # 数据库模型 (SQLAlchemy 2.0)
 │   │   ├── schemas/           # Pydantic 模型
 │   │   ├── services/          # 业务逻辑
-│   │   └── utils/             # 工具函数
-│   ├── requirements.txt       # Python 依赖
-│   └── run.py                 # 启动脚本
+│   │   │   ├── scheduler.py   # 排班算法
+│   │   │   └── stats.py       # 统计服务
+│   │   ├── exceptions.py      # 自定义异常
+│   │   ├── handlers.py        # 异常处理器
+│   │   ├── logger.py          # 日志配置
+│   │   ├── rate_limit.py      # API 限流
+│   │   └── config.py          # 配置管理
+│   ├── migrations/            # Alembic 数据库迁移
+│   ├── tests/                 # 测试套件 (43 个测试)
+│   ├── requirements.txt
+│   ├── pytest.ini
+│   ├── alembic.ini
+│   └── Dockerfile
 │
-└── frontend/                   # 前端应用
-    ├── src/
-    │   ├── components/        # Vue 组件
-    │   ├── views/             # 页面视图
-    │   ├── stores/            # Pinia 状态管理
-    │   └── api/               # API 调用
-    ├── package.json
-    └── vite.config.js
+├── frontend/                   # 前端应用
+│   ├── src/
+│   │   ├── components/        # Vue 组件
+│   │   ├── views/             # 页面视图
+│   │   ├── stores/            # Pinia 状态管理
+│   │   │   ├── employee.ts
+│   │   │   ├── shift.ts
+│   │   │   └── schedule.ts
+│   │   └── api/               # API 调用
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── Dockerfile
+│   └── nginx.conf
+│
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # CI/CD 工作流
+│
+├── Makefile                    # 常用命令
+├── docker-compose.yml          # Docker 编排
+├── CLAUDE.md                   # 项目开发文档
+└── README.md
 ```
 
 ## 启动命令
 
-- 后端: `cd backend && python run.py` (http://localhost:8000)
-- 前端: `cd frontend && pnpm dev` (http://localhost:5173)
-- API 文档: http://localhost:8000/docs
+### 开发模式
+
+```bash
+# 使用 Makefile（推荐）
+make dev        # 启动开发模式（前后端）
+
+# 或手动启动
+make backend    # 只启动后端 (http://localhost:8000)
+make frontend   # 只启动前端 (http://localhost:5173)
+```
+
+### 配置变量
+
+```bash
+# 可通过环境变量覆盖默认配置
+BACKEND_PORT=8000 FRONTEND_PORT=5173 make dev
+```
+
+### Docker 部署
+
+```bash
+docker-compose up -d
+# 前端: http://localhost
+# 后端: http://localhost:8000
+```
 
 ## 关键功能
 
-1. 员工信息管理（姓名、职位、可工作时间、偏好班次等）
-2. 班次类型管理（早班、中班、晚班等，支持自定义时长和颜色）
-3. Dashboard 首页：统计卡片、今日排班、快捷操作
-4. 排班日历视图：月历展示、月份切换
-5. 智能排班算法：根据员工可用性、偏好、工作时长均衡自动生成排班
-6. 排班统计：员工月度排班天数、班次分布
-7. 导出功能（支持 CSV）
+1. **员工管理** - 姓名、职位、班组、可用时间、偏好班次
+2. **班组管理** - 按班组分组和排班
+3. **班次管理** - 自定义时长、颜色、所需人数
+4. **Dashboard** - 统计卡片、今日排班、周/月统计
+5. **排班日历** - 月历展示、月份切换
+6. **智能排班** - 自动生成，考虑偏好、均衡、约束
+7. **排班统计** - 天数、班次分布、工作时长
+8. **导出功能** - Excel/CSV 格式
+
+## 测试
+
+```bash
+# 运行所有测试
+make test
+
+# 或手动运行
+cd backend && source venv/bin/activate && pytest tests/ -v
+```
+
+测试覆盖：
+- API 接口测试 (员工、班次、排班、班组)
+- 排班算法测试 (时长计算、公平性、约束满足)
+- 异常处理测试
+
+## 数据库迁移
+
+```bash
+make migrate      # 生成并应用迁移
+make migrate-gen  # 只生成迁移文件
+make migrate-up   # 应用待执行的迁移
+make migrate-down # 回滚最后一次迁移
+```
 
 ## 排班算法说明
 
 智能排班算法采用以下策略：
-1. **约束过滤**: 首先过滤掉不满足硬约束的员工
-2. **评分排序**: 对满足条件的员工进行评分（偏好匹配度、工作时长均衡、避免连续同班次等）
-3. **贪心分配**: 选择评分最高的员工分配到班次
-4. **跨天支持**: 自动处理跨天班次
+
+1. **约束过滤** - 过滤不满足硬约束的员工
+2. **评分排序** - 偏好匹配(25分) + 工作均衡(120分) + 避免连续同班次(10分)
+3. **贪心分配** - 选择评分最高的员工
+4. **跨天支持** - 自动处理跨天班次
 
 ## 主要 API 接口
 
-- `GET /api/employees` - 获取员工列表
-- `POST /api/employees` - 创建员工
-- `GET /api/shifts` - 获取班次类型列表
-- `POST /api/shifts` - 创建班次类型
-- `POST /api/schedules/generate` - 生成排班
-- `GET /api/schedules` - 获取排班列表
-- `PUT /api/schedules/{id}` - 更新排班
-- `GET /api/schedules/export` - 导出排班
+| 模块 | 接口 | 说明 |
+|------|------|------|
+| 员工 | `GET/POST /api/employees` | 员工列表/创建 |
+| 班组 | `GET/POST /api/teams` | 班组列表/创建 |
+| 班次 | `GET/POST /api/shifts` | 班次类型列表/创建 |
+| 排班 | `GET /api/schedules` | 排班列表（分页、搜索） |
+| 排班 | `POST /api/schedules/generate` | 智能生成排班 |
+| 排班 | `GET /api/schedules/stats` | 排班统计 |
+| 排班 | `GET /api/schedules/export` | 导出排班 |
+
+完整 API 文档: http://localhost:8000/docs
+
+## 代码质量
+
+- **测试覆盖**: 43 个测试用例
+- **异常处理**: 统一错误响应格式
+- **API 限流**: slowapi 保护关键接口
+- **日志系统**: RotatingFileHandler，分离错误日志
+- **类型注解**: 关键函数完整类型提示
 
 ## Agent Team 开发模式
 
-本项目支持使用 Agent Team 模式进行并行开发，适合多任务、多角色的协作场景。
-
-### 使用场景
-
-当有多个独立任务需要并行处理时，使用 Agent Team 模式可以提高效率：
-
-- 前后端分离开发
-- 功能开发 + 测试验证
-- 多个 Bug 同时修复
-
-### Team 模式工作流程
+本项目支持使用 Agent Team 模式进行并行开发：
 
 ```bash
 # 1. 创建团队
-TeamCreate(team_name="项目名-team", description="任务描述")
+TeamCreate(team_name="scheduler-team", description="任务描述")
 
 # 2. 创建任务
 TaskCreate(subject="任务标题", description="详细描述")
 
-# 3. 启动队友（Agent）
-Agent(
-    description="角色描述",
-    name="角色名",  # 如 backend-dev, frontend-dev, tester
-    prompt="详细任务说明",
-    subagent_type="general-purpose",
-    team_name="项目名-team"
-)
+# 3. 启动队友
+Agent(description="后端开发", name="backend-dev", prompt="...", subagent_type="general-purpose")
 
 # 4. 分配任务
-TaskUpdate(taskId="1", owner="角色名")
+TaskUpdate(taskId="1", owner="backend-dev")
 
-# 5. 设置任务依赖（可选）
-TaskUpdate(taskId="3", addBlockedBy=["1", "2"])  # 任务3依赖1和2完成
-
-# 6. 等待队友完成任务（自动接收消息）
-
-# 7. 关闭队友
-SendMessage(type="shutdown_request", recipient="角色名")
-
-# 8. 删除团队
+# 5. 完成后关闭
+SendMessage(type="shutdown_request", recipient="backend-dev")
 TeamDelete()
 ```
 
-### 角色分工示例
+## 代码提交流程
 
-| 角色 | 职责 | 任务类型 |
-|------|------|----------|
-| backend-dev | 后端 API 开发、数据库模型修改 | 后端相关任务 |
-| frontend-dev | 前端页面、组件开发 | 前端相关任务 |
-| tester | 功能测试、API 验证 | 测试验证任务 |
-
-### 代码提交流程
-
-完成开发和测试后，使用 Skill 工具提交代码：
+**重要**: 每次修改完推送代码前都要更新 CLAUDE.md 和 README.md
 
 ```bash
-/commit  # 或使用 Skill tool 调用 commit skill
+# 1. 更新文档
+# 2. 提交代码
+git add -A && git commit -m "描述"
+# 3. 推送
+git push origin main
 ```
 
-### 注意事项
+## 注意事项
 
-1. 任务之间设置依赖关系，确保测试在开发完成后进行
-2. 队友之间通过 SendMessage 通信
-3. 完成后记得关闭所有队友并删除团队
-4. 重要修改需要经过测试验证后再提交
+1. CORS 配置从环境变量读取，生产环境需配置 `CORS_ORIGINS`
+2. API 限流默认开启，生成排班 5次/分钟，导出 10次/分钟
+3. 日志文件位于 `backend/logs/` 目录
