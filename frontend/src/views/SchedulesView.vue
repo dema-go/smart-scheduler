@@ -47,6 +47,8 @@
         ref="tableRef"
         :data="schedules"
         stripe
+        v-loading="loading"
+        element-loading-text="加载中..."
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
@@ -133,6 +135,7 @@ const getTextColor = (color) => {
 const tableRef = ref(null)
 const schedules = ref([])
 const selectedIds = ref([])
+const loading = ref(false)
 const queryParams = ref({
   start_date: null,
   end_date: null,
@@ -160,6 +163,7 @@ const shifts = ref([])
 const teams = ref([])
 
 const loadData = async () => {
+  loading.value = true
   try {
     const params = {
       page: pagination.value.page,
@@ -167,6 +171,8 @@ const loadData = async () => {
     }
     if (queryParams.value.start_date) params.start_date = queryParams.value.start_date
     if (queryParams.value.end_date) params.end_date = queryParams.value.end_date
+    // 使用后端搜索替代前端过滤
+    if (queryParams.value.employee_name) params.employee_name = queryParams.value.employee_name
 
     const [schedRes, empRes, shiftRes, teamRes] = await Promise.all([
       scheduleApi.getAll(params),
@@ -176,29 +182,16 @@ const loadData = async () => {
     ])
 
     // 后端返回分页数据结构
-    const items = schedRes.data.items
+    schedules.value = schedRes.data.items || []
     pagination.value.total = schedRes.data.total
     employees.value = empRes.data
     shifts.value = shiftRes.data
     teams.value = teamRes.data
-
-    // 客户端过滤员工名称
-    applyFilter(items)
   } catch (error) {
     ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
   }
-}
-
-const applyFilter = (items) => {
-  // 员工名称过滤在客户端进行，因为后端只支持 employee_id 过滤
-  if (!queryParams.value.employee_name) {
-    schedules.value = items || []
-    return
-  }
-  const keyword = queryParams.value.employee_name.toLowerCase()
-  schedules.value = (items || []).filter(s =>
-    s.employee_name?.toLowerCase().includes(keyword)
-  )
 }
 
 const handlePageChange = (page) => {

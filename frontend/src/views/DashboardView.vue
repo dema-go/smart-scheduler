@@ -154,6 +154,7 @@ const stats = ref({
 })
 
 const todaySchedules = ref([])
+const loading = ref(false)
 
 // 员工排班统计
 const employeeStats = ref([])
@@ -204,6 +205,7 @@ const loadStats = async () => {
 }
 
 const loadData = async () => {
+  loading.value = true
   try {
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
@@ -233,6 +235,8 @@ const loadData = async () => {
     stats.value.weekScheduleCount = schedules.length
   } catch (error) {
     ElMessage.error('加载数据失败')
+  } finally {
+    loading.value = false
   }
 }
 
